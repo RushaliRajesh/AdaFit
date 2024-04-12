@@ -249,7 +249,7 @@ def run_attn(attn, x, use_ffn):
     if weights is not None:
         weights = weights[:, 0, :] 
 
-    x = torch.stack(attn_out_list) 
+    x = torch.stack(attn_out_list)  
     return x, weights
 
 class GraphLayer(nn.Module):
