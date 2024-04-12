@@ -315,7 +315,7 @@ def train_pcpnet(opt):
 
             while test_fraction_done <= train_fraction_done and test_batchind+1 < test_num_batch:
 
-                # set to evaluation mode
+                # set to evaluation mode 
                 model.eval()
 
                 test_batchind, data = next(test_enum)
