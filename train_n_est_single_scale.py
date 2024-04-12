@@ -324,7 +324,7 @@ def train_pcpnet(opt):
                 points = data[0]
                 target = data[1:-2]
                 data_trans = data[-2]
-                # n_effective_points = data[-1].squeeze()
+                # n_effective_points = data[-1].squeeze()b
 
                 points = points.transpose(2, 1)
                 points = points.to(device)
