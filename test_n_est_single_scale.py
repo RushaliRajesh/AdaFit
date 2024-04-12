@@ -184,7 +184,7 @@ def test_n_est(opt):
                     normals_to_write[np.logical_and(normals_to_write < eps, normals_to_write > -eps)] = 0.0
                     np.savetxt(os.path.join(output_dir, dataset.shape_names[shape_ind] + '.normals'),
                                normals_to_write)
-
+                    print(os.path.join(output_dir, dataset.shape_names[shape_ind]))
 
                     print('saved normals for ' + dataset.shape_names[shape_ind])
                     sys.stdout.flush()

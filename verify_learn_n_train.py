@@ -262,7 +262,7 @@ def train_pcpnet(opt):
             optimizer.zero_grad()
             # import pdb; pdb.set_trace()
             # forward pass
-            pred, beta_pred, weights, trans, trans2, neighbor_normals,bias = model(points)
+            pred, beta_pred, weights, trans, trans2, neighbor_normals,bias,jet_o = model(points)
 
             loss, n_loss, _, consistency_loss, normal_loss,bias_loss, tr_rms = compute_loss(
                 pred=pred, target=target,
@@ -274,7 +274,7 @@ def train_pcpnet(opt):
                 arch=opt.arch,
                 patch_rot=trans if opt.use_point_stn else None,
                 use_consistency=opt.use_consistency, point_weights=weights, neighbor_normals=neighbor_normals,
-                opt=opt, trans=trans, trans2=trans2,bias=bias)
+                opt=opt, trans=trans, trans2=trans2,bias=bias, jet_o=jet_o)
             
             rms_tr_li.append(tr_rms)
             loss_tr_li.append(loss.item())
@@ -335,7 +335,7 @@ def train_pcpnet(opt):
 
                 # forward pass
                 with torch.no_grad():
-                    pred, beta_pred, weights, trans, trans2, neighbor_normals,bias = model(points)
+                    pred, beta_pred, weights, trans, trans2, neighbor_normals,bias, jet_o = model(points)
 
                 loss, n_loss, err_angle, consistency_loss, normal_loss,bias_loss, te_rms = compute_loss(
                     pred=pred, target=target,
@@ -347,7 +347,7 @@ def train_pcpnet(opt):
                     arch=opt.arch,
                     patch_rot=trans if opt.use_point_stn else None, phase='test',
                     use_consistency=opt.use_consistency, point_weights=weights, neighbor_normals=neighbor_normals,
-                    opt=opt, trans=trans, trans2=trans2,bias = bias)
+                    opt=opt, trans=trans, trans2=trans2,bias = bias,jet_o=jet_o)
                 
                 rms_te_li.append(te_rms)
                 loss_te_li.append(loss.item())
@@ -417,7 +417,7 @@ def train_pcpnet(opt):
 
 def compute_loss(pred, target, outputs, output_pred_ind, output_target_ind, output_loss_weight, normal_loss_type, arch,
                  patch_rot=None, phase='train',
-                 use_consistency=False, point_weights=None, neighbor_normals=None, opt=None, trans=None, trans2=None,bias=None):
+                 use_consistency=False, point_weights=None, neighbor_normals=None, opt=None, trans=None, trans2=None,bias=None, jet_o=None):
 
     loss = torch.zeros(1, device=pred.device, dtype=pred.dtype)
     n_loss = torch.zeros(1, device=pred.device, dtype=pred.dtype)
@@ -518,8 +518,9 @@ def compute_loss(pred, target, outputs, output_pred_ind, output_target_ind, outp
                 regularizer = regularizer_trans + regularizer
                 consistency_loss = consistency_loss + regularizer
 
+                learn_n_loss = 0.1 * torch.nn.MSELoss()(torch.zeros_like(jet_o,device=pred.device, dtype=pred.dtype),jet_o)
                 #loss = consistency_loss + normal_loss
-                loss = consistency_loss + normal_loss + bias_loss
+                loss = consistency_loss + normal_loss + bias_loss + learn_n_loss
         else:
             raise ValueError('Unsupported output type: %s' % (o))
 

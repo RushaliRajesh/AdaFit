@@ -284,7 +284,7 @@ class PointcloudPatchDataset(data.Dataset):
         patch_pts_valid = []
 
         scale_ind_range = np.zeros([len(self.patch_radius_absolute[shape_ind]), 2], dtype='int')
-        effective_points_num = np.array([], dtype=np.int)
+        effective_points_num = np.array([], dtype=np.int32)
         for s, rad in enumerate(self.patch_radius_absolute[shape_ind]):
 
             if self.neighbor_search_method == 'r':
@@ -303,12 +303,12 @@ class PointcloudPatchDataset(data.Dataset):
             effective_points_num = np.append(effective_points_num, point_count)
 
             # randomly decrease the number of points to get patches with different point densities
-            if self.point_count_std > 0:
+            if self.point_count_std > 0: #false
                 point_count = max(5, round(point_count * self.rng.uniform(1.0-self.point_count_std*2)))
                 point_count = min(point_count, len(patch_point_inds))
 
             # if there are too many neighbors, pick a random subset
-            if point_count < len(patch_point_inds):
+            if point_count < len(patch_point_inds): #false
                 patch_point_inds = patch_point_inds[self.rng.choice(len(patch_point_inds), point_count, replace=False)]
 
             start = s*self.points_per_patch
@@ -416,6 +416,8 @@ class PointcloudPatchDataset(data.Dataset):
                 patch_feats = patch_feats + (neighbor_normals,)
             else:
                 raise ValueError('Unknown patch feature: %s' % (pfeat))
+            
+        # import pdb; pdb.set_trace()
 
         return (patch_pts,) + patch_feats + (trans,)  + (patch_scale,) #+ (effective_points_num,)
 
