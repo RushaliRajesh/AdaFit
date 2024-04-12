@@ -247,7 +247,7 @@ def run_attn(attn, x, use_ffn):
     # The weights are only for debug and visualisation.
     # We just return the (N, K) matrix, not the full (N, K, K) tensor.
     if weights is not None:
-        weights = weights[:, 0, :]
+        weights = weights[:, 0, :] 
 
     x = torch.stack(attn_out_list)
     return x, weights
