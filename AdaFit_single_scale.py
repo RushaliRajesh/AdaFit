@@ -118,7 +118,7 @@ def fit_Wjet(points, weights, order=2, compute_neighbor_normals=False):
                 torch.cat([-(beta_[:, :, 0] + 2 * beta_[:, :, 2] * x + beta_[:, :, 4] * y + 3 * beta_[:, :, 5] *  x_2 +
                              2 *beta_[:, :, 7] * xy + beta_[:, :, 8] * y_2),
                            -(beta_[:, :, 1] + 2 * beta_[:, :, 3] * y + beta_[:, :, 4] * x + 3 * beta_[:, :, 6] * y_2 +
-                             beta_[:, :, 7] * x_2 + 2 * beta_[:, :, 8] * xy),
+                             beta_[:, :, 7] * x_2 + 2 * beta_[:, :, 8] * xy), 
                            torch.ones(batch_size, n_points, 1, device=x.device)], dim=2), p=2, dim=2)
         elif order == 4:
             # [x, y, x_2, y_2, xy, x_3, y_3, x_2 * y, y_2 * x, x_3 * x, y_3 * y, x_3 * y, y_3 * x, y_2 * x_2
