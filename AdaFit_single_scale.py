@@ -91,6 +91,13 @@ def fit_Wjet(points, weights, order=2, compute_neighbor_normals=False):
         xy = x * y 
         A = torch.cat([x, y, x_2, y_2, xy, x_3, y_3, x_2*y, x*y_2, x_4, y_4, x_3*y, y_3*x, x_2*y_2, x_4*x, y_4*y, x_4*y, y_4*x, x_3*y_2, x_2*y_3, 
                        torch.ones_like(x)], dim=2)
+        h_2 = h * h
+        h_3 = h_2 * h
+        h_4 = h_3 * h
+        h_5 = h_4 * h
+        D_inv = torch.diag_embed(1/torch.cat([h, h, h_2, h_2, h_2, h_3, h_3, h_3, h_3, h_4, h_4, h_4, h_4, h_4, h_5, h_5, h_5, h_5, h_5, h_5,
+                         torch.ones_like(h)], dim=1))
+
     else:
         raise ValueError("Polynomial order unsupported, please use 1 or 2 ")
 
