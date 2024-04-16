@@ -29,13 +29,13 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
 
     # naming / file handling
-    parser.add_argument('--indir', type=str, default='./data/pcpnet/', help='input folder (point clouds)')
+    parser.add_argument('--indir', type=str, default='/media/ashish/zoneD/AdaFit/data/pcpnet/', help='input folder (point clouds)')
     parser.add_argument('--testset', type=str, default='testset_high_noise.txt', help='shape set file name')
     parser.add_argument('--models', type=str, default='my_experiment', help='names of trained models, can evaluate multiple models')
     parser.add_argument('--modelpostfix', type=str, default='_model.pth', help='model file postfix')
     parser.add_argument('--logdir', type=str, default='./log_v3/my_experiments/', help='model folder')
     parser.add_argument('--parmpostfix', type=str, default='_params.pth', help='parameter file postfix')
-    parser.add_argument('--gpu_idx', type=int, default=1, help='set < 0 to use CPU')
+    parser.add_argument('--gpu_idx', type=int, default=2, help='set < 0 to use CPU')
 
     parser.add_argument('--sparse_patches', type=int, default=False, help='evaluate on a sparse set of patches, given by a .pidx file containing the patch center point indices.')
     parser.add_argument('--sampling', type=str, default='full', help='sampling strategy, any of:\n'
@@ -51,12 +51,12 @@ def parse_arguments():
 def test_n_est(opt):
 
     opt.models = opt.models.split()
-
     if opt.seed < 0:
         opt.seed = random.randint(1, 10000)
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(opt.gpu_idx)
-    device = torch.device("cpu" if opt.gpu_idx < 0 else "cuda:%d" % 0)
+    # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
+    # os.environ["CUDA_VISIBLE_DEVICES"] = str(opt.gpu_idx)
+    device = torch.device("cpu" if opt.gpu_idx < 0 else "cuda:%d" % opt.gpu_idx)
+    print("device",device)
 
     for model_name in opt.models:
        # fetch the model from the log dir
@@ -87,6 +87,7 @@ def test_n_est(opt):
         dataloader, dataset, datasampler = get_data_loaders(opt, trainopt, target_features)
 
         if trainopt.arch == 'simple':
+            print("simple")
             spec = importlib.util.spec_from_file_location("AdaFit_single_scale", os.path.join(
                 os.path.join( "models/", "AdaFit_single_scale.py")))
             DeepFit = importlib.util.module_from_spec(spec)
@@ -147,7 +148,7 @@ def test_n_est(opt):
                 if trainopt.arch == 'simple' or trainopt.arch == 'res' or trainopt.arch == '3dmfv':
                     start_time = time.time()
                     #n_est, beta_pred, weights, trans, trans2, neighbor_normals = regressor(points)
-                    n_est, beta_pred, weights, trans, trans2, neighbor_normals,_ = regressor(points)
+                    n_est, beta_pred, weights, trans, trans2, neighbor_normals, attn1_weights, attn2_weights  = regressor(points)
                     end_time = time.time()
 
             print("elapsed_time per point: {} ms".format(1000*(end_time-start_time) / opt.batchSize))

@@ -27,7 +27,7 @@ BASE_DIR = os.path.abspath(os.path.join(BASELINE_DIR, os.pardir))
 # python3 evaluate.py --normal_results_path './log/jetnet_nci_new3/ablations/Deepfit_simple_sigmoid_cr_log_d1_p64_Lsin/results/'
 parser = argparse.ArgumentParser()
 parser.add_argument('--normal_results_path', type=str, default='/result/', help='Log dir [default: log]')
-parser.add_argument('--data_path', type=str, default='./data/pcpnet/', help='Relative path to data directory')
+parser.add_argument('--data_path', type=str, default='/media/ashish/zoneD/AdaFit/data/pcpnet/', help='Relative path to data directory')
 parser.add_argument('--sparse_patches', type=int, default=True, help='Evaluate on a sparse subset or on the entire point cloud')
 parser.add_argument('--dataset_list', type=str,
                     default=['testset_no_noise', 'testset_low_noise', 'testset_med_noise', 'testset_high_noise',

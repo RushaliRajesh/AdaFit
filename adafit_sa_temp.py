@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import normal_estimation_utils
 import ThreeDmFVNet
 
+
 def fit_Wjet(points, weights, order=2, compute_neighbor_normals=False, w_betas = None):
     """
     Fit a "n-jet" (n-order truncated Taylor expansion) to a point clouds with weighted points.
@@ -254,73 +255,6 @@ class PointNetFeatures(nn.Module):
 
         return x,  trans, trans2, points
     
-
-# class MultiheadSelfAttention(nn.Module):
-#     def __init__(self, feature_size, num_heads=4):
-#         super(MultiheadSelfAttention, self).__init__()
-#         self.feature_size = feature_size
-#         self.num_heads = num_heads
-
-#         # Linear transformations for Q, K, V for each head
-#         self.key = nn.ModuleList([nn.Linear(feature_size, feature_size) for _ in range(num_heads)])
-#         self.query = nn.ModuleList([nn.Linear(feature_size, feature_size) for _ in range(num_heads)])
-#         self.value = nn.ModuleList([nn.Linear(feature_size, feature_size) for _ in range(num_heads)])
-
-#         # Final linear transformation
-#         self.fc = nn.Linear(feature_size * num_heads, feature_size)
-
-#     def forward(self, x, mask=None):
-#         # Lists to store outputs from each head
-#         outputs = []
-
-#         for i in range(self.num_heads):
-#             # Apply linear transformations for this head
-#             keys = self.key[i](x)
-#             queries = self.query[i](x)
-#             values = self.value[i](x)
-
-#             # Scaled dot-product attention
-#             scores = torch.matmul(queries, keys.transpose(-2, -1)) / torch.sqrt(torch.tensor(self.feature_size, dtype=torch.float32))
-
-#             # Apply mask (if provided)
-#             if mask is not None:
-#                 scores = scores.masked_fill(mask == 0, -1e9)
-
-#             # Apply softmax
-#             attention_weights = F.softmax(scores, dim=-1)
-
-#             # Multiply weights with values
-#             output = torch.matmul(attention_weights, values)
-
-#             # Append output from this head to the list of outputs
-#             outputs.append(output)
-
-#         # Concatenate outputs from all heads along the feature dimension
-#         concatenated_output = torch.cat(outputs, dim=-1)
-
-#         # Apply final linear transformation
-#         output = self.fc(concatenated_output)
-#         print(output.shape)
-
-#         return output
-
-class multihead(nn.Module):
-    def __init__(self, feature_size):
-        super(multihead, self).__init__()
-        self.feature_size = feature_size
-
-        self.key = nn.Linear(feature_size, feature_size)
-        self.query = nn.Linear(feature_size, feature_size)
-        self.value = nn.Linear(feature_size, feature_size)
-
-        self.multi = nn.MultiheadAttention(feature_size, num_heads = 4, batch_first=True)
-
-    def forward(self, x):
-        keys = self.key(x) * x
-        queries = self.query(x) * x
-        values = self.value(x) * x
-        attn_out, attn_weights = self.multi(queries, keys, values)
-
 class SelfAttentionLayer(nn.Module):
     def __init__(self, feature_size):
         super(SelfAttentionLayer, self).__init__()
@@ -370,10 +304,8 @@ class PointNetEncoder(nn.Module):
         self.bn2 = nn.BatchNorm1d(128)
         self.bn3 = nn.BatchNorm1d(1024)
 
-        # self.attn1 = SelfAttentionLayer(64)
-        # self.attn2 = SelfAttentionLayer(64)
-        self.attn1 = multihead(64)
-        # self.attn2 = MultiheadSelfAttention(64)
+        self.attn1 = SelfAttentionLayer(64)
+        self.attn2 = SelfAttentionLayer(64)
         self.alpha = 0.2
 
         self.temp = nn.Parameter(torch.tensor(1.0, dtype=torch.float32), requires_grad=True) 
@@ -387,14 +319,11 @@ class PointNetEncoder(nn.Module):
         pointfeat = pointfeat / self.temp
         print("temp: "  , self.temp.item())
         print()
-        ans = self.attn1(pointfeat)
-        # pointfeat, attn1_weights = ans[0], ans[1]
-        # attn2_weights = attn1_weights
-        pdb.set_trace()
-        # pointfeat_inter1 = (1-self.alpha)*attn1_pointfeat + self.alpha*pointfeat
+        attn1_pointfeat, attn1_weights = self.attn1(pointfeat)
+        pointfeat_inter1 = (1-self.alpha)*attn1_pointfeat + self.alpha*pointfeat
 
-        # attn2_pointfeat, attn2_weights = self.attn2(pointfeat_inter1)
-        # pointfeat = (1-self.alpha)*attn2_pointfeat + self.alpha*pointfeat
+        attn2_pointfeat, attn2_weights = self.attn2(pointfeat_inter1)
+        pointfeat = (1-self.alpha)*attn2_pointfeat + self.alpha*pointfeat
         pointfeat = pointfeat.permute(0,2,1)
 
 
@@ -476,8 +405,7 @@ class DeepFit(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
-        w_betas = self.conv_w_betas(x)
-        # w_betas = 0.01 + F.softmax(self.conv_w_betas(x), dim=-1) # w_betas are alphas
+        w_betas = 0.01 + F.softmax(self.conv_w_betas(x), dim=-1) # w_betas are alphas
 
         w_betas = w_betas.permute(0, 2, 1)
         # pdb.set_trace()
