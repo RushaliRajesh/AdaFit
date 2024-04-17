@@ -6,7 +6,7 @@
 import os
 
 DATASET_PATH='./data/pcpnet/'
-LOGDIR = './multih_2/my_experiments/'
+LOGDIR = './multih_22/my_experiments/'
 
 BATCH_SIZE = 512  # default 512
 TRAIN_SET = 'trainingset_whitenoise.txt'
@@ -24,8 +24,10 @@ CON_REG="log"
 WEIGHT_MODE='sigmoid'
 LOSS_TYPE='sin' 
 NN_SEARCH="k"
-GPU = "cuda:1"
+GPU = "cuda:1"   
 learn_n = True
+REFINE = 0
+REFINE_EPOCH = 0
 
 COMPUTE_RESIDUALS=0
 
@@ -35,10 +37,10 @@ print("training {}".format(name))
 os.system('python3 train_n_est_single_scale.py --indir {} --name {} --points_per_patch {} --gpu_idx {} --batchSize {} --jet_order {} '
           '--nepoch {} --trainset {} --testset {} --logdir {} --n_gaussians {} --arch {} --normal_loss {} '
           '--weight_mode {} --saveinterval 20 --lr {} --con_reg {}'
-          ' --scheduler_type {} --neighbor_search {} --learn_n {}'
+          ' --scheduler_type {} --neighbor_search {} --learn_n {} --refine {} --refine_epoch {}'
           .format(DATASET_PATH, name, N_POINTS, GPUIDX, BATCH_SIZE, ORDER, N_EPOCHS, TRAIN_SET,
                   VAL_SET, LOGDIR, N_GAUSSIANS, arch, LOSS_TYPE, WEIGHT_MODE,
-                  LR, CON_REG, SCHEDULER, NN_SEARCH, learn_n))
+                  LR, CON_REG, SCHEDULER, NN_SEARCH, learn_n, REFINE, REFINE_EPOCH))
 print(LOGDIR)
 print("testing {}".format(name))
 os.system('python3  test_n_est_single_scale.py --testset {} --modelpostfix {} --logdir {} --gpu_idx {} --models {}'.format(

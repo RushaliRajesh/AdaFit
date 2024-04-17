@@ -303,7 +303,7 @@ class PointNetFeatures(nn.Module):
 #         print(output.shape)
 
 #         return output
- 
+
 class multihead(nn.Module):
     def __init__(self, feature_size):
         super(multihead, self).__init__()
@@ -316,9 +316,9 @@ class multihead(nn.Module):
         self.multi = nn.MultiheadAttention(feature_size, num_heads = 4, batch_first=True)
 
     def forward(self, x):
-        keys = self.key(x)
+        keys = self.key(x) 
         queries = self.query(x) 
-        values = self.value(x) 
+        values = self.value(x)
         attn_out, attn_weights = self.multi(queries, keys, values, need_weights=True)
         return attn_out, attn_weights
 
@@ -371,9 +371,9 @@ class PointNetEncoder(nn.Module):
         self.bn2 = nn.BatchNorm1d(128)
         self.bn3 = nn.BatchNorm1d(1024)
 
-        # self.attn1 = SelfAttentionLayer(64)
-        # self.attn2 = SelfAttentionLayer(64)
-        self.attn1 = multihead(64)
+        self.attn1 = SelfAttentionLayer(64)
+        self.attn2 = SelfAttentionLayer(64)
+        # self.attn1 = multihead(64)
         # self.attn2 = MultiheadSelfAttention(64)
         self.alpha = 0.2
 
@@ -388,14 +388,14 @@ class PointNetEncoder(nn.Module):
         pointfeat = pointfeat / self.temp
         print("temp: "  , self.temp.item())
         print()
-        ans = self.attn1(pointfeat)
-        pointfeat, attn1_weights = ans[0], ans[1]
+        attn1_pointfeat, attn1_weights = self.attn1(pointfeat)
         attn2_weights = attn1_weights
         # pdb.set_trace()
         # pointfeat_inter1 = (1-self.alpha)*attn1_pointfeat + self.alpha*pointfeat
 
         # attn2_pointfeat, attn2_weights = self.attn2(pointfeat_inter1)
-        # pointfeat = (1-self.alpha)*attn2_pointfeat + self.alpha*pointfeat
+        # pointfeat = (1-self.alpha)*attn2_pointfeat + self.alpha*pointfeat_inter1
+        pointfeat = (1-self.alpha)*attn1_pointfeat + self.alpha*pointfeat
         pointfeat = pointfeat.permute(0,2,1)
 
 
@@ -622,7 +622,7 @@ class QSTN(nn.Module):
         x = normal_estimation_utils.batch_quat_to_rotmat(x)
 
         return x
-
+ 
 
 def compute_principal_curvatures(beta):
     """

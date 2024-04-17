@@ -1,7 +1,3 @@
-# train_n_est.py train a DeepFit model
-# Author:Itzik Ben Sabat sitzikbs[at]gmail.com
-# If you use this code,see LICENSE.txt file and cite our work
-
 from __future__ import print_function
 
 import argparse
@@ -43,7 +39,7 @@ def parse_arguments():
     parser.add_argument('--trainset', type=str, default='trainingset_no_noise.txt', help='training set file name')
     parser.add_argument('--testset', type=str, default='validationset_no_noise.txt', help='test set file name')
     parser.add_argument('--saveinterval', type=int, default='10', help='save model each n epochs')
-    parser.add_argument('--refine', action="store_true", help='flag to refine the model, path determined by outri and model name')
+    parser.add_argument('--refine',type = int, default = 0, help='flag to refine the model, path determined by outri and model name')
     parser.add_argument('--refine_epoch', type=int, default=500, help='refine model from this epoch')
     parser.add_argument('--overwrite', action="store_true", help='to overwrite existing log directory')
     parser.add_argument('--gpu_idx', type=int, default=0, help='set < 0 to use CPU')
@@ -59,7 +55,7 @@ def parse_arguments():
                         'mean: patch mean')
     parser.add_argument('--patch_point_count_std', type=float, default=0, help='standard deviation of the number of points in a patch')
     parser.add_argument('--patches_per_shape', type=int, default=1000, help='number of patches sampled from each shape in an epoch')
-    parser.add_argument('--workers', type=int, default=3, help='number of data loading workers - 0 means same thread as main execution')
+    parser.add_argument('--workers', type=int, default=2, help='number of data loading workers - 0 means same thread as main execution')
     parser.add_argument('--cache_capacity', type=int, default=100, help='Max. number of dataset elements (usually shapes) to hold in the cache at the same time.')
     parser.add_argument('--seed', type=int, default=3627473, help='manual seed')
     parser.add_argument('--training_order', type=str, default='random', help='order in which the training patches are presented:\n'
@@ -98,6 +94,7 @@ def parse_arguments():
     parser.add_argument('--con_reg', type=str, default='log', help='choose consistency regularizer: mean, uniform')
     parser.add_argument('--gpu', type=str, default='cuda:0', help='gpu to use')
     parser.add_argument('--learn_n', type=bool, default=True, help='flag to learn n (degree of polynomial)')
+    parser.add_argument('--stopped_at', type=int, default = 0, help='epoch where the model was stopped')
     return parser.parse_args()
 
 
@@ -157,13 +154,14 @@ def train_pcpnet(opt):
     train_writer = SummaryWriter(os.path.join(log_dirname, 'train'))
     test_writer = SummaryWriter(os.path.join(log_dirname, 'test'))
     log_file = open(log_filename, 'w')
-
+    
     model = get_model(opt, log_dirname)
 
 
     os.system('cp train_n_est.py %s' % (log_dirname))  # backup the current training file
 
     if opt.refine:
+        print("le")
         refine_model_filename = os.path.join(out_dir, '{}_model_{}.pth' .format(opt.name, opt.refine_epoch))
         model.load_state_dict(torch.load(refine_model_filename))
 
@@ -1350,3 +1348,6 @@ if __name__ == '__main__':
 # if __name__ == '__main__':
 #     train_opt = parse_arguments()
 #     train_pcpnet(train_opt)
+# train_n_est.py train a DeepFit model
+# Author:Itzik Ben Sabat sitzikbs[at]gmail.com
+# If you use this code,see LICENSE.txt file and cite our work
