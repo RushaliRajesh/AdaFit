@@ -303,7 +303,7 @@ class PointNetFeatures(nn.Module):
 #         print(output.shape)
 
 #         return output
-
+ 
 class multihead(nn.Module):
     def __init__(self, feature_size):
         super(multihead, self).__init__()
@@ -316,9 +316,9 @@ class multihead(nn.Module):
         self.multi = nn.MultiheadAttention(feature_size, num_heads = 4, batch_first=True)
 
     def forward(self, x):
-        keys = self.key(x) * x
-        queries = self.query(x) * x
-        values = self.value(x) * x
+        keys = self.key(x)
+        queries = self.query(x) 
+        values = self.value(x) 
         attn_out, attn_weights = self.multi(queries, keys, values, need_weights=True)
         return attn_out, attn_weights
 
