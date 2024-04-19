@@ -97,31 +97,6 @@ def fit_Wjet(points, weights, order=2, compute_neighbor_normals=False, w_betas =
         h_5 = h_4 * h
         D_inv = torch.diag_embed(1/torch.cat([h, h, h_2, h_2, h_2, h_3, h_3, h_3, h_3, h_4, h_4, h_4, h_4, h_4, h_5, h_5, h_5, h_5, h_5, h_5,
                          torch.ones_like(h)], dim=1))
-        
-    elif order == 7:
-        y_2 = y * y
-        x_2 = x * x
-        x_3 = x_2 * x
-        y_3 = y_2 * y
-        x_4 = x_3 * x
-        y_4 = y_3 * y
-        x_5 = x_4 * x
-        y_5 = y_4 * y
-        x_6 = x_5 * x
-        y_6 = y_5 * y
-        xy = x * y 
-        A = torch.cat([x, y, x_2, y_2, xy, x_3, y_3, x_2*y, x*y_2, x_4, y_4, x_3*y, y_3*x, x_2*y_2, x_5, y_5, x_4*y, y_4*x, x_3*y_2, x_2*y_3, 
-                       x_6, y_6, x_5*y, x*y_5, x_4*y_2, x_2*y_4, x_3*y_3, x_6*x, y_6*y, x_6*y, x*y_6, x_5*y_2, x_2*y_5, x_4*y_3, x_3*y_4,
-                       torch.ones_like(x)], dim=2)
-        h_2 = h * h
-        h_3 = h_2 * h
-        h_4 = h_3 * h
-        h_5 = h_4 * h
-        h_6 = h_5 * h
-        h_7 = h_6 * h
-        D_inv = torch.diag_embed(1/torch.cat([h, h, h_2, h_2, h_2, h_3, h_3, h_3, h_3, h_4, h_4, h_4, h_4, h_4, h_5, h_5, h_5, h_5, h_5, h_5,
-                                              h_6, h_6, h_6, h_6, h_6, h_6, h_6, h_7, h_7, h_7, h_7, h_7, h_7, h_7, h_7, 
-                         torch.ones_like(h)], dim=1))
 
     else:
         raise ValueError("Polynomial order unsupported, please use 1 or 2 ")
@@ -179,25 +154,6 @@ def fit_Wjet(points, weights, order=2, compute_neighbor_normals=False, w_betas =
                              beta_[:, :, 7] * x_2 + 2 * beta_[:, :, 8] * xy + 4 * beta_[:, :, 10] * y_3 + beta_[:, :, 11] * x_3 +
                              3 * beta_[:, :, 12] * x * y_2 + 2 * beta_[:, :, 13] * y * x_2 + 5*beta_[:,:,15]*y_4 + beta_[:,:,16]*x_4 + 4*beta_[:,:,17]*y_3*x + 
                              2*beta_[:,:,18]*y*x_3 + 3*beta_[:,:,19]*y_2*x_2),
-
-                             torch.ones(batch_size, n_points, 1, device=x.device)], dim=2), p=2, dim=2)
-            
-        elif order == 7:
-            neighbor_normals = torch.nn.functional.normalize(
-                torch.cat([-(beta_[:, :, 0]+ 2*beta_[:,:,2]*x + beta_[:,:,4]*y + 3*beta_[:,:,5]*x_2 + 2*beta_[:,:,7]*xy + beta_[:,:,8]*y_2 + 
-                             4*beta_[:,:,9]*x_3 + 3*beta_[:,:,11]*x_2*y + beta_[:,:,12]*y_3 + 2*beta_[:,:,13]*y_2*x + 5*beta_[:,:,14]*x_4 + 
-                             4*beta_[:,:,16]*x_3*y + beta_[:,:,17]*y_4 + 3*beta_[:,:,18]*x_2*y_2 + 2*beta_[:,:,19]*x*y_3 +
-                             6*beta_[:, :, 20]*x_5 + 5*beta_[:, :, 22]*x_4*y + beta_[:, :, 23] *y_5 + 4*beta_[:,:, 24]*x_3*y_2 + 2*beta_[:, :, 25]*x*y_4 + 
-                             3*beta_[:, :, 26]*x_2*y_3 + 7*beta_[:, :, 27]*x_6 + 6*beta_[:, :, 29]*x_5*y + beta_[:, :, 30]*y_6 + 5*beta_[:, :, 31]*x_4*y_2 + 
-                             2*beta_[:, :, 32]*x*y_5 + 4*beta_[:, :, 33]*x_3*y + 3*beta_[:, :, 34]*x_2*y_4),
-
-                             -(beta_[:, :, 1] + 2 * beta_[:, :, 3] * y + beta_[:, :, 4] * x + 3 * beta_[:, :, 6] * y_2 +
-                             beta_[:, :, 7] * x_2 + 2 * beta_[:, :, 8] * xy + 4 * beta_[:, :, 10] * y_3 + beta_[:, :, 11] * x_3 +
-                             3 * beta_[:, :, 12] * x * y_2 + 2 * beta_[:, :, 13] * y * x_2 + 5*beta_[:,:,15]*y_4 + beta_[:,:,16]*x_4 + 4*beta_[:,:,17]*y_3*x + 
-                             2*beta_[:,:,18]*y*x_3 + 3*beta_[:,:,19]*y_2*x_2 + 
-                             6*beta_[:, :, 21]*y_5 + beta_[:, :, 22]*x_5 + 5*beta_[:, :, 23]*y_4*x + 2*beta_[:, :, 24]*y*x_4 + 4*beta_[:, :, 25]*x_2*y_3 + 
-                             3*beta_[:, :, 26]*y_2*x_3 + 7*beta_[:, :, 28]*y_6 + x_6*beta_[:, :, 29] + 6*beta_[:, :, 30]*y_5*x + 2*beta_[:, :, 31]*y*x_5 + 
-                             5*beta_[:, :, 32]*y_4*x_2 + 3*beta_[:, :, 33]*y_2*x_4 + 4*beta_[:, :, 34]*y_3*x_3),
 
                              torch.ones(batch_size, n_points, 1, device=x.device)], dim=2), p=2, dim=2)
             
@@ -432,14 +388,13 @@ class PointNetEncoder(nn.Module):
         pointfeat = pointfeat / self.temp
         print("temp: "  , self.temp.item())
         print()
-        attn1_pointfeat, attn1_weights = self.attn1(pointfeat)
-        attn2_weights = attn1_weights
+        pointfeat, attn1_weights = self.attn1(pointfeat)
+        # attn2_weights = attn1_weights
         # pdb.set_trace()
         # pointfeat_inter1 = (1-self.alpha)*attn1_pointfeat + self.alpha*pointfeat
 
-        # attn2_pointfeat, attn2_weights = self.attn2(pointfeat_inter1)
+        pointfeat, attn2_weights = self.attn2(pointfeat)
         # pointfeat = (1-self.alpha)*attn2_pointfeat + self.alpha*pointfeat_inter1
-        pointfeat = (1-self.alpha)*attn1_pointfeat + self.alpha*pointfeat
         pointfeat = pointfeat.permute(0,2,1)
 
 
@@ -666,7 +621,7 @@ class QSTN(nn.Module):
         x = normal_estimation_utils.batch_quat_to_rotmat(x)
 
         return x
- 
+
 
 def compute_principal_curvatures(beta):
     """

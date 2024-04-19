@@ -7,6 +7,8 @@ import numpy as np
 import torch.nn.functional as F
 import normal_estimation_utils
 import ThreeDmFVNet
+from transplant_attn.transformer_from_torch import TransformerEncoder, TransformerEncoderLayer
+from transplant_attn.MultiheadAttention_from_torch import MultiheadAttention
 
 def fit_Wjet(points, weights, order=2, compute_neighbor_normals=False, w_betas = None):
     """
@@ -97,31 +99,6 @@ def fit_Wjet(points, weights, order=2, compute_neighbor_normals=False, w_betas =
         h_5 = h_4 * h
         D_inv = torch.diag_embed(1/torch.cat([h, h, h_2, h_2, h_2, h_3, h_3, h_3, h_3, h_4, h_4, h_4, h_4, h_4, h_5, h_5, h_5, h_5, h_5, h_5,
                          torch.ones_like(h)], dim=1))
-        
-    elif order == 7:
-        y_2 = y * y
-        x_2 = x * x
-        x_3 = x_2 * x
-        y_3 = y_2 * y
-        x_4 = x_3 * x
-        y_4 = y_3 * y
-        x_5 = x_4 * x
-        y_5 = y_4 * y
-        x_6 = x_5 * x
-        y_6 = y_5 * y
-        xy = x * y 
-        A = torch.cat([x, y, x_2, y_2, xy, x_3, y_3, x_2*y, x*y_2, x_4, y_4, x_3*y, y_3*x, x_2*y_2, x_5, y_5, x_4*y, y_4*x, x_3*y_2, x_2*y_3, 
-                       x_6, y_6, x_5*y, x*y_5, x_4*y_2, x_2*y_4, x_3*y_3, x_6*x, y_6*y, x_6*y, x*y_6, x_5*y_2, x_2*y_5, x_4*y_3, x_3*y_4,
-                       torch.ones_like(x)], dim=2)
-        h_2 = h * h
-        h_3 = h_2 * h
-        h_4 = h_3 * h
-        h_5 = h_4 * h
-        h_6 = h_5 * h
-        h_7 = h_6 * h
-        D_inv = torch.diag_embed(1/torch.cat([h, h, h_2, h_2, h_2, h_3, h_3, h_3, h_3, h_4, h_4, h_4, h_4, h_4, h_5, h_5, h_5, h_5, h_5, h_5,
-                                              h_6, h_6, h_6, h_6, h_6, h_6, h_6, h_7, h_7, h_7, h_7, h_7, h_7, h_7, h_7, 
-                         torch.ones_like(h)], dim=1))
 
     else:
         raise ValueError("Polynomial order unsupported, please use 1 or 2 ")
@@ -182,25 +159,6 @@ def fit_Wjet(points, weights, order=2, compute_neighbor_normals=False, w_betas =
 
                              torch.ones(batch_size, n_points, 1, device=x.device)], dim=2), p=2, dim=2)
             
-        elif order == 7:
-            neighbor_normals = torch.nn.functional.normalize(
-                torch.cat([-(beta_[:, :, 0]+ 2*beta_[:,:,2]*x + beta_[:,:,4]*y + 3*beta_[:,:,5]*x_2 + 2*beta_[:,:,7]*xy + beta_[:,:,8]*y_2 + 
-                             4*beta_[:,:,9]*x_3 + 3*beta_[:,:,11]*x_2*y + beta_[:,:,12]*y_3 + 2*beta_[:,:,13]*y_2*x + 5*beta_[:,:,14]*x_4 + 
-                             4*beta_[:,:,16]*x_3*y + beta_[:,:,17]*y_4 + 3*beta_[:,:,18]*x_2*y_2 + 2*beta_[:,:,19]*x*y_3 +
-                             6*beta_[:, :, 20]*x_5 + 5*beta_[:, :, 22]*x_4*y + beta_[:, :, 23] *y_5 + 4*beta_[:,:, 24]*x_3*y_2 + 2*beta_[:, :, 25]*x*y_4 + 
-                             3*beta_[:, :, 26]*x_2*y_3 + 7*beta_[:, :, 27]*x_6 + 6*beta_[:, :, 29]*x_5*y + beta_[:, :, 30]*y_6 + 5*beta_[:, :, 31]*x_4*y_2 + 
-                             2*beta_[:, :, 32]*x*y_5 + 4*beta_[:, :, 33]*x_3*y + 3*beta_[:, :, 34]*x_2*y_4),
-
-                             -(beta_[:, :, 1] + 2 * beta_[:, :, 3] * y + beta_[:, :, 4] * x + 3 * beta_[:, :, 6] * y_2 +
-                             beta_[:, :, 7] * x_2 + 2 * beta_[:, :, 8] * xy + 4 * beta_[:, :, 10] * y_3 + beta_[:, :, 11] * x_3 +
-                             3 * beta_[:, :, 12] * x * y_2 + 2 * beta_[:, :, 13] * y * x_2 + 5*beta_[:,:,15]*y_4 + beta_[:,:,16]*x_4 + 4*beta_[:,:,17]*y_3*x + 
-                             2*beta_[:,:,18]*y*x_3 + 3*beta_[:,:,19]*y_2*x_2 + 
-                             6*beta_[:, :, 21]*y_5 + beta_[:, :, 22]*x_5 + 5*beta_[:, :, 23]*y_4*x + 2*beta_[:, :, 24]*y*x_4 + 4*beta_[:, :, 25]*x_2*y_3 + 
-                             3*beta_[:, :, 26]*y_2*x_3 + 7*beta_[:, :, 28]*y_6 + x_6*beta_[:, :, 29] + 6*beta_[:, :, 30]*y_5*x + 2*beta_[:, :, 31]*y*x_5 + 
-                             5*beta_[:, :, 32]*y_4*x_2 + 3*beta_[:, :, 33]*y_2*x_4 + 4*beta_[:, :, 34]*y_3*x_3),
-
-                             torch.ones(batch_size, n_points, 1, device=x.device)], dim=2), p=2, dim=2)
-            
     # import pdb; pdb.set_trace()
 
     return beta.squeeze(), n_est, neighbor_normals
@@ -242,7 +200,58 @@ def solve_linear_system(XtX, XtY, sub_batch_size=None):
                     torch.solve(XtY[sub_batch_size * i:sub_batch_size * (i + 1), ...], XtX[sub_batch_size * i:sub_batch_size * (i + 1), ...])
     return beta
 
+class GraphLayer(nn.Module):
+    def __init__(self, dim=64, k1=40, k2=20):
+        super(GraphLayer, self).__init__()
+        self.dim = dim
+        self.k1 = k1
+        self.k2 = k2
 
+        self.bn1 = nn.BatchNorm2d(self.dim)
+        self.bn2 = nn.BatchNorm2d(self.dim)
+
+        self.conv1 = nn.Sequential(nn.Conv2d(self.dim * 2, self.dim, kernel_size=1, bias=False),
+                                   self.bn1,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        self.conv2 = nn.Sequential(nn.Conv2d(self.dim, self.dim, kernel_size=1, bias=False),
+                                   self.bn2,
+                                   nn.LeakyReLU(negative_slope=0.2))
+
+        self.bn3 = nn.BatchNorm2d(self.dim)
+        self.bn4 = nn.BatchNorm2d(self.dim)
+        self.bn5 = nn.BatchNorm2d(self.dim)
+
+        self.conv3 = nn.Sequential(nn.Conv2d(self.dim * 2, self.dim, kernel_size=1, bias=False),
+                                    self.bn3,
+                                    nn.LeakyReLU(negative_slope=0.2))
+        self.conv4 = nn.Sequential(nn.Conv2d(self.dim, self.dim, kernel_size=1, bias=False),
+                                    self.bn4,
+                                    nn.LeakyReLU(negative_slope=0.2))
+        self.conv5 = nn.Sequential(nn.Conv2d(self.dim * 2, self.dim, kernel_size=1, bias=False),
+                                   self.bn5,
+                                   nn.LeakyReLU(negative_slope=0.2))
+        encoder_layer = TransformerEncoderLayer(d_model=512, nhead=8, dim_feedforward=2048, dropout=0.0)
+        self.attn = TransformerEncoder(encoder_layer, num_layers=1)
+
+    def forward(self, x):
+        x_knn1 = get_graph_feature(x, k=self.k1)  # (batch_size, 64, num_points) -> (batch_size, 64*2, num_points, k)
+        x_knn1 = self.conv1(x_knn1)  # (batch_size, 64*2, num_points, k) -> (batch_size, 64, num_points, k)
+        x_knn1 = self.conv2(x_knn1)  # (batch_size, 64, num_points, k) -> (batch_size, 64, num_points, k)
+        x, weights = run_attn(attn=self.attn, x=x.permute(0, 3, 2, 1), use_ffn=True)
+        x_k1 = x_knn1.max(dim=-1, keepdim=False)[0]  # (batch_size, 64, num_points, k) -> (batch_size, 64, num_points)
+
+        x_knn2 = get_graph_feature(x, self.k2)
+        x_knn2 = self.conv3(x_knn2)  # (batch_size, 64*2, num_points, k) -> (batch_size, 64, num_points, k)
+        x_knn2 = self.conv4(x_knn2)  # (batch_size, 64, num_points, k) -> (batch_size, 64, num_points, k)
+        x_k1 = x_k1.unsqueeze(-1).repeat(1, 1, 1, self.k2)
+
+        out = torch.cat([x_knn2, x_k1], dim=1)
+
+        out = self.conv5(out)
+        out = out.max(dim=-1, keepdim=False)[0]
+
+        return out
+    
 class PointNetFeatures(nn.Module):
     def __init__(self, num_points=500, num_scales=1, use_point_stn=False, use_feat_stn=False, point_tuple=1, sym_op='max'):
         super(PointNetFeatures, self).__init__()
@@ -298,74 +307,6 @@ class PointNetFeatures(nn.Module):
 
         return x,  trans, trans2, points
     
-
-# class MultiheadSelfAttention(nn.Module):
-#     def __init__(self, feature_size, num_heads=4):
-#         super(MultiheadSelfAttention, self).__init__()
-#         self.feature_size = feature_size
-#         self.num_heads = num_heads
-
-#         # Linear transformations for Q, K, V for each head
-#         self.key = nn.ModuleList([nn.Linear(feature_size, feature_size) for _ in range(num_heads)])
-#         self.query = nn.ModuleList([nn.Linear(feature_size, feature_size) for _ in range(num_heads)])
-#         self.value = nn.ModuleList([nn.Linear(feature_size, feature_size) for _ in range(num_heads)])
-
-#         # Final linear transformation
-#         self.fc = nn.Linear(feature_size * num_heads, feature_size)
-
-#     def forward(self, x, mask=None):
-#         # Lists to store outputs from each head
-#         outputs = []
-
-#         for i in range(self.num_heads):
-#             # Apply linear transformations for this head
-#             keys = self.key[i](x)
-#             queries = self.query[i](x)
-#             values = self.value[i](x)
-
-#             # Scaled dot-product attention
-#             scores = torch.matmul(queries, keys.transpose(-2, -1)) / torch.sqrt(torch.tensor(self.feature_size, dtype=torch.float32))
-
-#             # Apply mask (if provided)
-#             if mask is not None:
-#                 scores = scores.masked_fill(mask == 0, -1e9)
-
-#             # Apply softmax
-#             attention_weights = F.softmax(scores, dim=-1)
-
-#             # Multiply weights with values
-#             output = torch.matmul(attention_weights, values)
-
-#             # Append output from this head to the list of outputs
-#             outputs.append(output)
-
-#         # Concatenate outputs from all heads along the feature dimension
-#         concatenated_output = torch.cat(outputs, dim=-1)
-
-#         # Apply final linear transformation
-#         output = self.fc(concatenated_output)
-#         print(output.shape)
-
-#         return output
-
-class multihead(nn.Module):
-    def __init__(self, feature_size):
-        super(multihead, self).__init__()
-        self.feature_size = feature_size
-
-        self.key = nn.Linear(feature_size, feature_size)
-        self.query = nn.Linear(feature_size, feature_size)
-        self.value = nn.Linear(feature_size, feature_size)
-
-        self.multi = nn.MultiheadAttention(feature_size, num_heads = 4, batch_first=True)
-
-    def forward(self, x):
-        keys = self.key(x) 
-        queries = self.query(x) 
-        values = self.value(x)
-        attn_out, attn_weights = self.multi(queries, keys, values, need_weights=True)
-        return attn_out, attn_weights
-
 class SelfAttentionLayer(nn.Module):
     def __init__(self, feature_size):
         super(SelfAttentionLayer, self).__init__()
@@ -417,8 +358,6 @@ class PointNetEncoder(nn.Module):
 
         self.attn1 = SelfAttentionLayer(64)
         self.attn2 = SelfAttentionLayer(64)
-        # self.attn1 = multihead(64)
-        # self.attn2 = MultiheadSelfAttention(64)
         self.alpha = 0.2
 
         self.temp = nn.Parameter(torch.tensor(1.0, dtype=torch.float32), requires_grad=True) 
@@ -434,11 +373,9 @@ class PointNetEncoder(nn.Module):
         print()
         attn1_pointfeat, attn1_weights = self.attn1(pointfeat)
         attn2_weights = attn1_weights
-        # pdb.set_trace()
         # pointfeat_inter1 = (1-self.alpha)*attn1_pointfeat + self.alpha*pointfeat
 
         # attn2_pointfeat, attn2_weights = self.attn2(pointfeat_inter1)
-        # pointfeat = (1-self.alpha)*attn2_pointfeat + self.alpha*pointfeat_inter1
         pointfeat = (1-self.alpha)*attn1_pointfeat + self.alpha*pointfeat
         pointfeat = pointfeat.permute(0,2,1)
 
@@ -666,7 +603,7 @@ class QSTN(nn.Module):
         x = normal_estimation_utils.batch_quat_to_rotmat(x)
 
         return x
- 
+
 
 def compute_principal_curvatures(beta):
     """
@@ -700,3 +637,65 @@ def compute_principal_curvatures(beta):
 
     return curvatures, dirs
 
+def knn(x, k):
+    inner = -2 * torch.matmul(x.transpose(2, 1), x)
+    xx = torch.sum(x ** 2, dim=1, keepdim=True)
+    pairwise_distance = -xx - inner - xx.transpose(2, 1)
+
+    idx = pairwise_distance.topk(k=k, dim=-1)[1]  # (batch_size, num_points, k)
+    return idx
+def get_graph_feature(x, k=20, idx=None, dim9=False):
+    batch_size = x.size(0)
+    num_points = x.size(2)
+    x = x.view(batch_size, -1, num_points)
+    if idx is None:
+        if dim9 == False:
+            idx = knn(x, k=k)  # (batch_size, num_points, k)
+        else:
+            idx = knn(x[:, 6:], k=k)
+    device = torch.device('cuda')
+
+    idx_base = torch.arange(0, batch_size, device=device).view(-1, 1, 1) * num_points
+
+    idx = idx + idx_base
+
+    idx = idx.view(-1)
+
+    _, num_dims, _ = x.size()
+
+    x = x.transpose(2,1).contiguous()  # (batch_size, num_points, num_dims)  -> (batch_size*num_points, num_dims) #   batch_size * num_points * k + range(0, batch_size*num_points)
+    feature = x.view(batch_size * num_points, -1)[idx, :]
+    feature = feature.view(batch_size, num_points, k, num_dims)
+    x = x.view(batch_size, num_points, 1, num_dims).repeat(1, 1, k, 1)
+
+    feature = torch.cat((feature - x, x), dim=3).permute(0, 3, 1, 2).contiguous()
+
+    return feature  # (batch_size, 2*num_dims, num_points, k)
+
+def run_attn(attn, x, use_ffn):
+    """
+    :param attn:        Attention functions, currently support nn.Multihead and TransformerEncoder
+    :param x:           Input embeddings in shape (B, K, N, C), C denotes the No. of channels for each point, e.g. 512.
+    :param use_ffn:     if choose use_ffn, the input is only x
+    :return:            Soft attn output () and weights. The returned weights is None if use TransformerEncoder
+    """
+    attn_out_list = []
+    weights = None
+    B = x.shape[0]
+
+    if use_ffn:
+        for b in range(B):
+            attn_out, weights = attn(x[b])  # x: (K, N, 512), attn_out: (K, N, 512), weights: (N, K, K)
+            attn_out_list.append(attn_out)
+    else:
+        for b in range(B):
+            attn_out, weights = attn(x[b], x[b], x[b])  # x: (K, N, 512), attn_out: (K, N, 512), weights: (N, K, K)
+            attn_out_list.append(attn_out)
+
+    # The weights are only for debug and visualisation.
+    # We just return the (N, K) matrix, not the full (N, K, K) tensor.
+    if weights is not None:
+        weights = weights[:, 0, :]
+
+    x = torch.stack(attn_out_list)
+    return x, weights
