@@ -128,9 +128,9 @@ class SelfAttentionLayer(nn.Module):
         return output, attention_weights
 
 if __name__ == '__main__':
-    ctt = torch.rand(512, 256,64).to("cuda:1")
+    ctt = torch.rand(512, 256, 20, 64).to("cuda:0")
     model = NINormalNet().to("cuda:1")
-    attn = SelfAttentionLayer(64).to("cuda:1")
+    attn = SelfAttentionLayer(64).to("cuda:0")
     out = attn(ctt)
     print(out[0].shape)
     print(out[1].shape)

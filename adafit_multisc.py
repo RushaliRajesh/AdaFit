@@ -164,9 +164,6 @@ def fit_Wjet(points, weights, order=2, compute_neighbor_normals=False, w_betas =
 
     if compute_neighbor_normals:
         beta_ = beta.squeeze().unsqueeze(1).repeat(1, n_points, 1).unsqueeze(-1)
-        w_betas_mul = w_betas.unsqueeze(-1)
-        beta_ = beta_ * w_betas_mul
-        
         if order == 1:
             neighbor_normals = n_est.unsqueeze(1).repeat(1, n_points, 1)
         elif order == 2:
@@ -370,7 +367,7 @@ class PointNetFeatures(nn.Module):
 #         print(output.shape)
 
 #         return output
- 
+
 class multihead(nn.Module):
     def __init__(self, feature_size):
         super(multihead, self).__init__()
@@ -383,9 +380,9 @@ class multihead(nn.Module):
         self.multi = nn.MultiheadAttention(feature_size, num_heads = 4, batch_first=True)
 
     def forward(self, x):
-        keys = self.key(x)
+        keys = self.key(x) 
         queries = self.query(x) 
-        values = self.value(x) 
+        values = self.value(x)
         attn_out, attn_weights = self.multi(queries, keys, values, need_weights=True)
         return attn_out, attn_weights
 
@@ -420,7 +417,6 @@ class SelfAttentionLayer(nn.Module):
 
         return output, attention_weights
 
-
 class PointNetEncoder(nn.Module):
     def __init__(self, num_points=500, num_scales=1, use_point_stn=False, use_feat_stn=False, point_tuple=1, sym_op='max'):
         super(PointNetEncoder, self).__init__()
@@ -438,32 +434,51 @@ class PointNetEncoder(nn.Module):
         self.bn2 = nn.BatchNorm1d(128)
         self.bn3 = nn.BatchNorm1d(1024)
 
-        # self.attn1 = SelfAttentionLayer(64)
-        # self.attn2 = SelfAttentionLayer(64)
-        self.attn1 = multihead(64)
+        self.attn1 = SelfAttentionLayer(64)
+        self.attn2 = SelfAttentionLayer(64)
+        # self.attn1 = multihead(64)
         # self.attn2 = MultiheadSelfAttention(64)
+        self.knn_k = 40
         self.alpha = 0.2
 
         self.temp = nn.Parameter(torch.tensor(1.0, dtype=torch.float32), requires_grad=True) 
 
+        self.conv_pointfeat = torch.nn.Conv1d(128, 64, 1)
+
     def forward(self, points):
+        B,C,N = points.shape
+        # print(B,N,C)
         n_pts = points.size()[2]
         pointfeat, trans, trans2, points = self.pointfeat(points)
+        
+        inner_patch_idx = knn(pointfeat, self.knn_k)
+        pointfeat = pointfeat.transpose(2,1).contiguous()  # (batch_size, num_points, num_dims)  -> (batch_size*num_points, num_dims) #   batch_size * num_points * k + range(0, batch_size*num_points)
+        #pointfeat = B, N, C
+        inner_patch = pointfeat.view(B * N, -1)[inner_patch_idx, :]
+        inner_patch = inner_patch.view(B, N, self.knn_k, 64)
+        attn2_inner, attn2_weights = self.attn2(inner_patch)
+        attn2_inner = attn2_inner.max(dim=2)[0]
 
+        # pointfeat = pointfeat.permute(0,2,1)
         #self-attn layer (I added)
-        pointfeat = pointfeat.permute(0,2,1)
         pointfeat = pointfeat / self.temp
         print("temp: "  , self.temp.item())
         print()
-        ans = self.attn1(pointfeat)
-        pointfeat, attn1_weights = ans[0], ans[1]
-        attn2_weights = attn1_weights
+        attn1_pointfeat, attn1_weights = self.attn1(pointfeat)
+        pointfeat_concat = torch.cat([attn2_inner, attn1_pointfeat], dim=2)
+        pointfeat_concat = pointfeat_concat.permute(0,2,1)
+        pointfeat = self.conv_pointfeat(pointfeat_concat)
+        # pdb.set_trace()        
+
+        # attn1_pointfeat = attn1_pointfeat.unsqueeze(2).repeat(1, 1, self.knn_k, 1)
+        # final = torch.cat([attn1_pointfeat, attn2_inner], dim=2)
+        # attn2_weights = attn1_weights
         # pdb.set_trace()
         # pointfeat_inter1 = (1-self.alpha)*attn1_pointfeat + self.alpha*pointfeat
 
         # attn2_pointfeat, attn2_weights = self.attn2(pointfeat_inter1)
-        # pointfeat = (1-self.alpha)*attn2_pointfeat + self.alpha*pointfeat
-        pointfeat = pointfeat.permute(0,2,1)
+        # pointfeat = (1-self.alpha)*attn2_pointfeat + self.alpha*pointfeat_inter1
+        # pointfeat = (1-self.alpha)*attn1_pointfeat + self.alpha*pointfeat
 
 
         x = F.relu(self.bn2(self.conv2(pointfeat)))
@@ -536,10 +551,10 @@ class DeepFit(nn.Module):
         self.weight_mode = weight_mode
         self.compute_neighbor_normals = use_consistency
         self.do = torch.nn.Dropout(0.25)
-
+        self.save_ind = 0
 
     def forward(self, points):
-
+        self.save_ind += 1
         x, _, trans, trans2, points, attn1_weights, attn2_weights = self.feat(points)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
@@ -563,7 +578,7 @@ class DeepFit(nn.Module):
             print()
             # print("in the forward func with self.learn_n, jet num betas: ", self.num_betas)
             beta, normal, neighbor_normals = fit_Wjet(points, weights.squeeze(), order=self.jet_order,
-                                                              compute_neighbor_normals=self.compute_neighbor_normals, w_betas=w_betas)
+                                                              compute_neighbor_normals=self.compute_neighbor_normals, w_betas=w_betas, save_ind=self.save_ind)
         else:
             beta, normal, neighbor_normals = fit_Wjet(points, weights.squeeze(), order=self.jet_order,
                                                               compute_neighbor_normals=self.compute_neighbor_normals)
@@ -689,7 +704,7 @@ class QSTN(nn.Module):
         x = normal_estimation_utils.batch_quat_to_rotmat(x)
 
         return x
-
+ 
 
 def compute_principal_curvatures(beta):
     """
@@ -722,3 +737,11 @@ def compute_principal_curvatures(beta):
             dirs = torch.cat([dirs, torch.zeros(dirs.shape[0], 2, 1, device=dirs.device)], dim=2) # pad zero in the normal direction
 
     return curvatures, dirs
+
+def knn(x, k):
+    inner = -2 * torch.matmul(x.transpose(2, 1), x)
+    xx = torch.sum(x ** 2, dim=1, keepdim=True)
+    pairwise_distance = -xx - inner - xx.transpose(2, 1)
+
+    idx = pairwise_distance.topk(k=k, dim=-1)[1]  # (batch_size, num_points, k)
+    return idx

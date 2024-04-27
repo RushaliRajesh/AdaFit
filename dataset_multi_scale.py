@@ -285,7 +285,7 @@ class PointcloudPatchDataset(data.Dataset):
         patch_pts_valid = []
 
         scale_ind_range = np.zeros([len(self.patch_radius_absolute[shape_ind]), 2], dtype='int')
-        effective_points_num = np.array([], dtype=np.int)
+        effective_points_num = np.array([], dtype=np.int32)
         for s, rad in enumerate(self.patch_radius_absolute[shape_ind]):
 
             if self.neighbor_search_method == 'r':

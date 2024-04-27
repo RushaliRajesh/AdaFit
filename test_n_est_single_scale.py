@@ -29,7 +29,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
 
     # naming / file handling
-    parser.add_argument('--indir', type=str, default='/media/ashish/zoneD/AdaFit/data/pcpnet/', help='input folder (point clouds)')
+    parser.add_argument('--indir', type=str, default='data/pcpnet/', help='input folder (point clouds)')
     parser.add_argument('--testset', type=str, default='testset_high_noise.txt', help='shape set file name')
     parser.add_argument('--models', type=str, default='my_experiment', help='names of trained models, can evaluate multiple models')
     parser.add_argument('--modelpostfix', type=str, default='_model.pth', help='model file postfix')

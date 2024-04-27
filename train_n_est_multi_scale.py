@@ -156,6 +156,16 @@ def train_pcpnet(opt):
     train_dataloader, train_dataset, train_datasampler, test_dataloader, test_dataset, \
     test_datasampler = get_data_loaders(opt, target_features)
 
+    for i in train_dataloader:
+        for j in i:
+            print(j.shape)
+        break
+
+    for i in test_dataloader:
+        for j in i:
+            print(j.shape)
+        break
+
     # keep the exact training shape names for later reference
     opt.train_shapes = train_dataset.shape_names
     opt.test_shapes = test_dataset.shape_names
@@ -223,7 +233,6 @@ def train_pcpnet(opt):
             points = points.to(device)
             # data_trans = data_trans.to(device)
             target = tuple(t.to(device) for t in target)
-
             # zero gradients
             optimizer.zero_grad()
 
@@ -273,7 +282,7 @@ def train_pcpnet(opt):
 
                 # get testset batch and upload to GPU
                 points = data[0]
-                target = data[2:-2]
+                target = data[1:-2]
                 data_trans = data[-2]
                 # n_effective_points = data[-1].squeeze()
 
@@ -282,12 +291,14 @@ def train_pcpnet(opt):
                 data_trans = data_trans.to(device)
 
                 target = tuple(t.to(device) for t in target)
-                # weights = None
 
+                # for tarr in target:
+                #     print("----------------in test def:",tarr.shape)
+                # weights = None
                 # forward pass
                 with torch.no_grad():
                     pred, beta_pred, weights, trans, trans2, neighbor_normals,bias = model(points)
-
+                
                 loss, n_loss, err_angle, consistency_loss, normal_loss,bias_loss = compute_loss(
                     pred=pred, target=target,
                     outputs=opt.outputs,
@@ -368,6 +379,7 @@ def compute_loss(pred, target, outputs, output_pred_ind, output_target_ind, outp
         if o == 'unoriented_normals' or o == 'oriented_normals':
             o_pred = pred[:, output_pred_ind[oi]:output_pred_ind[oi]+3]
             o_target = target[output_target_ind[oi]]
+            print(o_target.shape)
             if patch_rot is not None:
                 # transform predictions with inverse transform
                 # since we know the transform to be a rotation (QSTN), the transpose is the inverse
@@ -380,6 +392,7 @@ def compute_loss(pred, target, outputs, output_pred_ind, output_target_ind, outp
                     cos_ang = normal_estimation_utils.cos_angle(o_pred, o_target)
                     normal_loss = (1-torch.abs(cos_ang)).pow(2).mean() * output_loss_weight[oi]
                 elif normal_loss_type == 'sin':
+                    print(o_pred.shape, o_target.shape)
                     normal_loss = 0.5 * torch.norm(torch.cross(o_pred, o_target, dim=-1), p=2, dim=1).mean()
                 else:
                     raise ValueError('Unsupported loss type: %s' % (normal_loss_type))

@@ -297,16 +297,16 @@ def train_pcpnet(opt):
             #                                            train_batchind, train_num_batch-1, green('train'), loss.item()), log_file)
 
 
-            train_writer.add_scalar('total_loss', loss.item(),
-                                    (epoch + train_fraction_done) * train_num_batch * opt.batchSize)
-            train_writer.add_scalar('n_loss', n_loss.item(),
-                                    (epoch + train_fraction_done) * train_num_batch * opt.batchSize)
-            train_writer.add_scalar('consistency_loss', consistency_loss.item(),
-                                    (epoch + train_fraction_done) * train_num_batch * opt.batchSize)
-            train_writer.add_scalar('normal_loss', normal_loss.item(),
-                                    (epoch + train_fraction_done) * train_num_batch * opt.batchSize)
-            test_writer.add_histogram('weights', weights.detach().cpu().numpy(),
-                                      (epoch + train_fraction_done) * train_num_batch * opt.batchSize)
+            # train_writer.add_scalar('total_loss', loss.item(),
+            #                         (epoch + train_fraction_done) * train_num_batch * opt.batchSize)
+            # train_writer.add_scalar('n_loss', n_loss.item(),
+            #                         (epoch + train_fraction_done) * train_num_batch * opt.batchSize)
+            # train_writer.add_scalar('consistency_loss', consistency_loss.item(),
+            #                         (epoch + train_fraction_done) * train_num_batch * opt.batchSize)
+            # train_writer.add_scalar('normal_loss', normal_loss.item(),
+            #                         (epoch + train_fraction_done) * train_num_batch * opt.batchSize)
+            # test_writer.add_histogram('weights', weights.detach().cpu().numpy(),
+            #                           (epoch + train_fraction_done) * train_num_batch * opt.batchSize)
             
             # import pdb; pdb.set_trace()
             np.save((os.path.join(opt.logdir, 'tr_attn1_weights.npy')), np.array(attn1_weights.detach().cpu()))
@@ -367,20 +367,20 @@ def train_pcpnet(opt):
                 np.save((os.path.join(opt.logdir, 'te_attn1_weights.npy')), np.array(attn1_weights.detach().cpu()))
                 np.save((os.path.join(opt.logdir, 'te_attn2_weights.npy')), np.array(attn2_weights.detach().cpu()))
 
-                test_writer.add_scalar('total_loss', loss.item(),
-                                       (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
-                test_writer.add_scalar('n_loss', n_loss.item(),
-                                       (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
-                test_writer.add_scalar('err_angle', err_angle.item(),
-                                       (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
-                test_writer.add_scalar('consistency_loss', consistency_loss.item(),
-                                       (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
-                test_writer.add_scalar('normal_loss', normal_loss.item(),
-                                       (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
-                test_writer.add_histogram('weights', weights.detach().cpu().numpy(),
-                                           (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
-                test_writer.add_scalar('lr', optimizer.param_groups[0]['lr'],
-                                          (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
+                # test_writer.add_scalar('total_loss', loss.item(),
+                #                        (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
+                # test_writer.add_scalar('n_loss', n_loss.item(),
+                #                        (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
+                # test_writer.add_scalar('err_angle', err_angle.item(),
+                #                        (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
+                # test_writer.add_scalar('consistency_loss', consistency_loss.item(),
+                #                        (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
+                # test_writer.add_scalar('normal_loss', normal_loss.item(),
+                #                        (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
+                # test_writer.add_histogram('weights', weights.detach().cpu().numpy(),
+                #                            (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
+                # test_writer.add_scalar('lr', optimizer.param_groups[0]['lr'],
+                #                           (epoch + test_fraction_done) * train_num_batch * opt.batchSize)
 
         rms_train_per_ep.append(np.mean(rms_tr_li))
         # print("rms train per ep: ",rms_train_per_ep)

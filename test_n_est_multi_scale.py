@@ -37,7 +37,7 @@ def parse_arguments():
     parser.add_argument('--parmpostfix', type=str, default='_params.pth', help='parameter file postfix')
     parser.add_argument('--gpu_idx', type=int, default=1, help='set < 0 to use CPU')
 
-    parser.add_argument('--sparse_patches', type=int, default=True, help='evaluate on a sparse set of patches, given by a .pidx file containing the patch center point indices.')
+    parser.add_argument('--sparse_patches', type=int, default=False, help='evaluate on a sparse set of patches, given by a .pidx file containing the patch center point indices.')
     parser.add_argument('--sampling', type=str, default='full', help='sampling strategy, any of:\n'
                         'full: evaluate all points in the dataset\n'
                         'sequential_shapes_random_patches: pick n random points from each shape as patch centers, shape order is not randomized')
@@ -218,7 +218,7 @@ def get_data_loaders(opt, trainopt, target_features):
         sparse_patches=opt.sparse_patches,
         cache_capacity=opt.cache_capacity,
         neighbor_search_method=trainopt.neighbor_search,
-        final_patch_size=opt.points_per_patch//4)
+        final_patch_size=trainopt.points_per_patch//4)
     if opt.sampling == 'full':
         test_datasampler = SequentialPointcloudPatchSampler(test_dataset)
     elif opt.sampling == 'sequential_shapes_random_patches':

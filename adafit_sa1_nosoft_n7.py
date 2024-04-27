@@ -10,7 +10,7 @@ import ThreeDmFVNet
 import matplotlib.pyplot as plt
 
 def vis(w_betas2, save_ind):
-    x = np.arange(0, 21, 1)
+    x = np.arange(0, 36, 1)
     # w_betas2 = F.softmax(w_betas2, dim=-1)
     print(w_betas2.shape)
     w_betas2 = w_betas2.cpu().numpy()
@@ -20,12 +20,12 @@ def vis(w_betas2, save_ind):
         y = w_betas2[rind, i, :]
         plt.plot(x, y, label=f'Point {i+1}')
 
-    plt.xticks(np.arange(0, 21, 1))
+    plt.xticks(np.arange(0, 36, 1))
     plt.xlabel('nth coeff')
     plt.ylabel('w_betas')
     plt.legend()
     plt.title('x, y, x_2, y_2, xy, x_3, y_3, x_2*y, x*y_2, x_4, y_4, x_3*y, y_3*x, x_2*y_2, x_4*x, y_4*y, x_4*y, y_4*x, x_3*y_2, x_2*y_3, 1')
-    # plt.savefig('all_weight_plots/{}.png'.format(save_ind), bbox_inches='tight')
+    plt.savefig('all_weights_n7/{}.png'.format(save_ind), bbox_inches='tight')
     # plt.show()
     plt.close('all')
 
@@ -149,7 +149,7 @@ def fit_Wjet(points, weights, order=2, compute_neighbor_normals=False, w_betas =
     if w_betas is not None:
         # print("w_betas: ", w_betas.shape)
         # print("A: ", A.shape)
-        # vis(w_betas, save_ind)
+        vis(w_betas, save_ind)
         A = A * w_betas
 
     XtX = torch.matmul(A.permute(0, 2, 1),  w_vector * A)
@@ -164,9 +164,6 @@ def fit_Wjet(points, weights, order=2, compute_neighbor_normals=False, w_betas =
 
     if compute_neighbor_normals:
         beta_ = beta.squeeze().unsqueeze(1).repeat(1, n_points, 1).unsqueeze(-1)
-        w_betas_mul = w_betas.unsqueeze(-1)
-        beta_ = beta_ * w_betas_mul
-        
         if order == 1:
             neighbor_normals = n_est.unsqueeze(1).repeat(1, n_points, 1)
         elif order == 2:
@@ -205,6 +202,7 @@ def fit_Wjet(points, weights, order=2, compute_neighbor_normals=False, w_betas =
                              2*beta_[:,:,18]*y*x_3 + 3*beta_[:,:,19]*y_2*x_2),
 
                              torch.ones(batch_size, n_points, 1, device=x.device)], dim=2), p=2, dim=2)
+            
         elif order == 7:
             neighbor_normals = torch.nn.functional.normalize(
                 torch.cat([-(beta_[:, :, 0]+ 2*beta_[:,:,2]*x + beta_[:,:,4]*y + 3*beta_[:,:,5]*x_2 + 2*beta_[:,:,7]*xy + beta_[:,:,8]*y_2 + 
@@ -370,7 +368,7 @@ class PointNetFeatures(nn.Module):
 #         print(output.shape)
 
 #         return output
- 
+
 class multihead(nn.Module):
     def __init__(self, feature_size):
         super(multihead, self).__init__()
@@ -383,9 +381,9 @@ class multihead(nn.Module):
         self.multi = nn.MultiheadAttention(feature_size, num_heads = 4, batch_first=True)
 
     def forward(self, x):
-        keys = self.key(x)
+        keys = self.key(x) 
         queries = self.query(x) 
-        values = self.value(x) 
+        values = self.value(x)
         attn_out, attn_weights = self.multi(queries, keys, values, need_weights=True)
         return attn_out, attn_weights
 
@@ -420,7 +418,6 @@ class SelfAttentionLayer(nn.Module):
 
         return output, attention_weights
 
-
 class PointNetEncoder(nn.Module):
     def __init__(self, num_points=500, num_scales=1, use_point_stn=False, use_feat_stn=False, point_tuple=1, sym_op='max'):
         super(PointNetEncoder, self).__init__()
@@ -438,9 +435,9 @@ class PointNetEncoder(nn.Module):
         self.bn2 = nn.BatchNorm1d(128)
         self.bn3 = nn.BatchNorm1d(1024)
 
-        # self.attn1 = SelfAttentionLayer(64)
-        # self.attn2 = SelfAttentionLayer(64)
-        self.attn1 = multihead(64)
+        self.attn1 = SelfAttentionLayer(64)
+        self.attn2 = SelfAttentionLayer(64)
+        # self.attn1 = multihead(64)
         # self.attn2 = MultiheadSelfAttention(64)
         self.alpha = 0.2
 
@@ -449,20 +446,20 @@ class PointNetEncoder(nn.Module):
     def forward(self, points):
         n_pts = points.size()[2]
         pointfeat, trans, trans2, points = self.pointfeat(points)
-
+        
         #self-attn layer (I added)
         pointfeat = pointfeat.permute(0,2,1)
         pointfeat = pointfeat / self.temp
         print("temp: "  , self.temp.item())
         print()
-        ans = self.attn1(pointfeat)
-        pointfeat, attn1_weights = ans[0], ans[1]
+        attn1_pointfeat, attn1_weights = self.attn1(pointfeat)
         attn2_weights = attn1_weights
         # pdb.set_trace()
         # pointfeat_inter1 = (1-self.alpha)*attn1_pointfeat + self.alpha*pointfeat
 
         # attn2_pointfeat, attn2_weights = self.attn2(pointfeat_inter1)
-        # pointfeat = (1-self.alpha)*attn2_pointfeat + self.alpha*pointfeat
+        # pointfeat = (1-self.alpha)*attn2_pointfeat + self.alpha*pointfeat_inter1
+        pointfeat = (1-self.alpha)*attn1_pointfeat + self.alpha*pointfeat
         pointfeat = pointfeat.permute(0,2,1)
 
 
@@ -536,10 +533,10 @@ class DeepFit(nn.Module):
         self.weight_mode = weight_mode
         self.compute_neighbor_normals = use_consistency
         self.do = torch.nn.Dropout(0.25)
-
+        self.save_ind = 0
 
     def forward(self, points):
-
+        self.save_ind += 1
         x, _, trans, trans2, points, attn1_weights, attn2_weights = self.feat(points)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
@@ -563,7 +560,7 @@ class DeepFit(nn.Module):
             print()
             # print("in the forward func with self.learn_n, jet num betas: ", self.num_betas)
             beta, normal, neighbor_normals = fit_Wjet(points, weights.squeeze(), order=self.jet_order,
-                                                              compute_neighbor_normals=self.compute_neighbor_normals, w_betas=w_betas)
+                                                              compute_neighbor_normals=self.compute_neighbor_normals, w_betas=w_betas, save_ind=self.save_ind)
         else:
             beta, normal, neighbor_normals = fit_Wjet(points, weights.squeeze(), order=self.jet_order,
                                                               compute_neighbor_normals=self.compute_neighbor_normals)
@@ -689,7 +686,7 @@ class QSTN(nn.Module):
         x = normal_estimation_utils.batch_quat_to_rotmat(x)
 
         return x
-
+ 
 
 def compute_principal_curvatures(beta):
     """
@@ -722,3 +719,4 @@ def compute_principal_curvatures(beta):
             dirs = torch.cat([dirs, torch.zeros(dirs.shape[0], 2, 1, device=dirs.device)], dim=2) # pad zero in the normal direction
 
     return curvatures, dirs
+
